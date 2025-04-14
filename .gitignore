@@ -1,0 +1,25 @@
+# Arquivos gerados pelo Android Studio e IntelliJ
+*.iml
+.idea/
+
+# Arquivos do Gradle
+.gradle/
+build/
+
+# Arquivos locais e específicos da máquina
+local.properties
+
+# Arquivos temporários e de captura
+captures/
+*.log
+*.tmp
+*.bak
+
+# Arquivos de builds nativos
+.externalNativeBuild
+.cxx
+cmake/
+
+# Arquivos específicos de sistemas operacionais
+.DS_Store
+Thumbs.db
