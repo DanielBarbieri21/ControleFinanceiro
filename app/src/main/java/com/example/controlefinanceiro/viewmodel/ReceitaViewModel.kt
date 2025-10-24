@@ -4,10 +4,15 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.controlefinanceiro.data.entity.Receita
 import com.example.controlefinanceiro.data.repository.ReceitaRepository
+import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.Flow
+import javax.inject.Inject
 
-class ReceitaViewModel(private val repository: ReceitaRepository) : ViewModel() {
+@HiltViewModel
+class ReceitaViewModel @Inject constructor(
+    private val repository: ReceitaRepository
+) : ViewModel() {
     fun insert(descricao: String, valor: Double, data: String) {
         viewModelScope.launch {
             repository.insert(Receita(descricao = descricao, valor = valor, data = data))

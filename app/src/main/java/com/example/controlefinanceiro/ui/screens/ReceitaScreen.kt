@@ -6,17 +6,30 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.controlefinanceiro.ui.components.ActionButton
+import com.example.controlefinanceiro.ui.components.FormField
 import com.example.controlefinanceiro.ui.theme.BlackBackground
 import com.example.controlefinanceiro.ui.theme.GreenIncome
 import com.example.controlefinanceiro.ui.theme.YellowText
+import com.example.controlefinanceiro.utils.ValidationUtils
 import com.example.controlefinanceiro.viewmodel.ReceitaViewModel
 
-@OptIn(ExperimentalMaterial3Api::class) // Adicionado para suprimir os avisos
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ReceitaScreen(viewModel: ReceitaViewModel, onBack: () -> Unit) {
+fun ReceitaScreen(
+    onBack: () -> Unit,
+    viewModel: ReceitaViewModel = hiltViewModel()
+) {
     var descricao by remember { mutableStateOf("") }
     var valor by remember { mutableStateOf("") }
     var data by remember { mutableStateOf("") }
+    
+    var descricaoError by remember { mutableStateOf(false) }
+    var valorError by remember { mutableStateOf(false) }
+    var dataError by remember { mutableStateOf(false) }
+    
+    var isLoading by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -38,60 +51,62 @@ fun ReceitaScreen(viewModel: ReceitaViewModel, onBack: () -> Unit) {
                     .padding(padding)
                     .padding(16.dp)
             ) {
-                OutlinedTextField(
+                FormField(
                     value = descricao,
-                    onValueChange = { descricao = it },
-                    label = { Text("Descrição", color = YellowText) },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = YellowText,
-                        unfocusedTextColor = YellowText,
-                        focusedLabelColor = YellowText,
-                        unfocusedLabelColor = YellowText,
-                        cursorColor = YellowText
-                    )
+                    onValueChange = { 
+                        descricao = it
+                        descricaoError = false
+                    },
+                    label = "Descrição",
+                    isError = descricaoError,
+                    errorMessage = ValidationUtils.getDescriptionError(descricao) ?: ""
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = valor,
-                    onValueChange = { valor = it },
-                    label = { Text("Valor", color = YellowText) },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = YellowText,
-                        unfocusedTextColor = YellowText,
-                        focusedLabelColor = YellowText,
-                        unfocusedLabelColor = YellowText,
-                        cursorColor = YellowText
-                    )
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = data,
-                    onValueChange = { data = it },
-                    label = { Text("Data (dd/MM/yyyy)", color = YellowText) },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = YellowText,
-                        unfocusedTextColor = YellowText,
-                        focusedLabelColor = YellowText,
-                        unfocusedLabelColor = YellowText,
-                        cursorColor = YellowText
-                    )
-                )
+                
                 Spacer(modifier = Modifier.height(16.dp))
-                Button(
+                
+                FormField(
+                    value = valor,
+                    onValueChange = { 
+                        valor = it
+                        valorError = false
+                    },
+                    label = "Valor (R$)",
+                    isError = valorError,
+                    errorMessage = ValidationUtils.getAmountError(valor) ?: ""
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                FormField(
+                    value = data,
+                    onValueChange = { 
+                        data = it
+                        dataError = false
+                    },
+                    label = "Data (dd/MM/yyyy)",
+                    isError = dataError,
+                    errorMessage = ValidationUtils.getDateError(data) ?: ""
+                )
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                ActionButton(
+                    text = if (isLoading) "Salvando..." else "Salvar Receita",
                     onClick = {
-                        if (descricao.isNotBlank() && valor.isNotBlank() && data.isNotBlank()) {
+                        // Validação usando utilitários
+                        descricaoError = !ValidationUtils.isValidDescription(descricao)
+                        valorError = !ValidationUtils.isValidAmount(valor)
+                        dataError = !ValidationUtils.isValidDate(data)
+                        
+                        if (!descricaoError && !valorError && !dataError) {
+                            isLoading = true
                             viewModel.insert(descricao, valor.toDoubleOrNull() ?: 0.0, data)
                             onBack()
                         }
                     },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = GreenIncome)
-                ) {
-                    Text("Salvar", color = BlackBackground)
-                }
+                    enabled = !isLoading,
+                    color = GreenIncome
+                )
             }
         }
     )

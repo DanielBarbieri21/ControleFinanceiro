@@ -6,17 +6,30 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.controlefinanceiro.ui.components.ActionButton
+import com.example.controlefinanceiro.ui.components.FormField
 import com.example.controlefinanceiro.ui.theme.BlackBackground
 import com.example.controlefinanceiro.ui.theme.RedExpense
 import com.example.controlefinanceiro.ui.theme.YellowText
+import com.example.controlefinanceiro.utils.ValidationUtils
 import com.example.controlefinanceiro.viewmodel.ContaViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ContaScreen(viewModel: ContaViewModel, onBack: () -> Unit) {
+fun ContaScreen(
+    onBack: () -> Unit,
+    viewModel: ContaViewModel = hiltViewModel()
+) {
     var descricao by remember { mutableStateOf("") }
     var valor by remember { mutableStateOf("") }
     var dataVencimento by remember { mutableStateOf("") }
+    
+    var descricaoError by remember { mutableStateOf(false) }
+    var valorError by remember { mutableStateOf(false) }
+    var dataError by remember { mutableStateOf(false) }
+    
+    var isLoading by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -38,64 +51,62 @@ fun ContaScreen(viewModel: ContaViewModel, onBack: () -> Unit) {
                     .padding(padding)
                     .padding(16.dp)
             ) {
-                OutlinedTextField(
+                FormField(
                     value = descricao,
-                    onValueChange = { descricao = it },
-                    label = { Text("Descrição", color = YellowText) },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = YellowText,
-                        unfocusedTextColor = YellowText,
-                        focusedLabelColor = YellowText,
-                        unfocusedLabelColor = YellowText,
-                        cursorColor = YellowText
-                    )
+                    onValueChange = { 
+                        descricao = it
+                        descricaoError = false
+                    },
+                    label = "Descrição da Conta",
+                    isError = descricaoError,
+                    errorMessage = ValidationUtils.getDescriptionError(descricao) ?: ""
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = valor,
-                    onValueChange = { valor = it },
-                    label = { Text("Valor", color = YellowText) },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = YellowText,
-                        unfocusedTextColor = YellowText,
-                        focusedLabelColor = YellowText,
-                        unfocusedLabelColor = YellowText,
-                        cursorColor = YellowText
-                    )
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = dataVencimento,
-                    onValueChange = { dataVencimento = it },
-                    label = { Text("Data de Vencimento (dd/MM/yyyy)", color = YellowText) },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = YellowText,
-                        unfocusedTextColor = YellowText,
-                        focusedLabelColor = YellowText,
-                        unfocusedLabelColor = YellowText,
-                        cursorColor = YellowText
-                    )
-                )
+                
                 Spacer(modifier = Modifier.height(16.dp))
-                Button(
+                
+                FormField(
+                    value = valor,
+                    onValueChange = { 
+                        valor = it
+                        valorError = false
+                    },
+                    label = "Valor (R$)",
+                    isError = valorError,
+                    errorMessage = ValidationUtils.getAmountError(valor) ?: ""
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                FormField(
+                    value = dataVencimento,
+                    onValueChange = { 
+                        dataVencimento = it
+                        dataError = false
+                    },
+                    label = "Data de Vencimento (dd/MM/yyyy)",
+                    isError = dataError,
+                    errorMessage = ValidationUtils.getDateError(dataVencimento) ?: ""
+                )
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                ActionButton(
+                    text = if (isLoading) "Salvando..." else "Salvar Conta",
                     onClick = {
-                        if (descricao.isNotBlank() && valor.isNotBlank() && dataVencimento.isNotBlank()) {
-                            viewModel.insert(
-                                descricao,
-                                valor.toDoubleOrNull() ?: 0.0,
-                                dataVencimento
-                            )
+                        // Validação usando utilitários
+                        descricaoError = !ValidationUtils.isValidDescription(descricao)
+                        valorError = !ValidationUtils.isValidAmount(valor)
+                        dataError = !ValidationUtils.isValidDate(dataVencimento)
+                        
+                        if (!descricaoError && !valorError && !dataError) {
+                            isLoading = true
+                            viewModel.insert(descricao, valor.toDoubleOrNull() ?: 0.0, dataVencimento)
                             onBack()
                         }
                     },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = RedExpense)
-                ) {
-                    Text("Salvar", color = BlackBackground)
-                }
+                    enabled = !isLoading,
+                    color = RedExpense
+                )
             }
         }
     )

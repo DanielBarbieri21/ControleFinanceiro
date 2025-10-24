@@ -6,18 +6,32 @@ import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.controlefinanceiro.ui.components.ActionButton
+import com.example.controlefinanceiro.ui.components.FormField
 import com.example.controlefinanceiro.ui.theme.BlackBackground
 import com.example.controlefinanceiro.ui.theme.RedExpense
 import com.example.controlefinanceiro.ui.theme.YellowText
+import com.example.controlefinanceiro.utils.ValidationUtils
 import com.example.controlefinanceiro.viewmodel.CartaoViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun CartaoScreen(viewModel: CartaoViewModel, onBack: () -> Unit) {
+fun CartaoScreen(
+    onBack: () -> Unit,
+    viewModel: CartaoViewModel = hiltViewModel()
+) {
     var descricao by remember { mutableStateOf("") }
     var valorTotal by remember { mutableStateOf("") }
     var parcelas by remember { mutableStateOf("") }
     var dataVencimento by remember { mutableStateOf("") }
+    
+    var descricaoError by remember { mutableStateOf(false) }
+    var valorError by remember { mutableStateOf(false) }
+    var parcelasError by remember { mutableStateOf(false) }
+    var dataError by remember { mutableStateOf(false) }
+    
+    var isLoading by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = {
@@ -39,65 +53,69 @@ fun CartaoScreen(viewModel: CartaoViewModel, onBack: () -> Unit) {
                     .padding(padding)
                     .padding(16.dp)
             ) {
-                OutlinedTextField(
+                FormField(
                     value = descricao,
-                    onValueChange = { descricao = it },
-                    label = { Text("Descrição", color = YellowText) },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = YellowText,
-                        unfocusedTextColor = YellowText,
-                        focusedLabelColor = YellowText,
-                        unfocusedLabelColor = YellowText,
-                        cursorColor = YellowText
-                    )
+                    onValueChange = { 
+                        descricao = it
+                        descricaoError = false
+                    },
+                    label = "Descrição da Compra",
+                    isError = descricaoError,
+                    errorMessage = ValidationUtils.getDescriptionError(descricao) ?: ""
                 )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = valorTotal,
-                    onValueChange = { valorTotal = it },
-                    label = { Text("Valor Total", color = YellowText) },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = YellowText,
-                        unfocusedTextColor = YellowText,
-                        focusedLabelColor = YellowText,
-                        unfocusedLabelColor = YellowText,
-                        cursorColor = YellowText
-                    )
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = parcelas,
-                    onValueChange = { parcelas = it },
-                    label = { Text("Número de Parcelas", color = YellowText) },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = YellowText,
-                        unfocusedTextColor = YellowText,
-                        focusedLabelColor = YellowText,
-                        unfocusedLabelColor = YellowText,
-                        cursorColor = YellowText
-                    )
-                )
-                Spacer(modifier = Modifier.height(8.dp))
-                OutlinedTextField(
-                    value = dataVencimento,
-                    onValueChange = { dataVencimento = it },
-                    label = { Text("Data de Vencimento (dd/MM/yyyy)", color = YellowText) },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = OutlinedTextFieldDefaults.colors(
-                        focusedTextColor = YellowText,
-                        unfocusedTextColor = YellowText,
-                        focusedLabelColor = YellowText,
-                        unfocusedLabelColor = YellowText,
-                        cursorColor = YellowText
-                    )
-                )
+                
                 Spacer(modifier = Modifier.height(16.dp))
-                Button(
+                
+                FormField(
+                    value = valorTotal,
+                    onValueChange = { 
+                        valorTotal = it
+                        valorError = false
+                    },
+                    label = "Valor Total (R$)",
+                    isError = valorError,
+                    errorMessage = ValidationUtils.getAmountError(valorTotal) ?: ""
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                FormField(
+                    value = parcelas,
+                    onValueChange = { 
+                        parcelas = it
+                        parcelasError = false
+                    },
+                    label = "Número de Parcelas",
+                    isError = parcelasError,
+                    errorMessage = ValidationUtils.getInstallmentsError(parcelas) ?: ""
+                )
+                
+                Spacer(modifier = Modifier.height(16.dp))
+                
+                FormField(
+                    value = dataVencimento,
+                    onValueChange = { 
+                        dataVencimento = it
+                        dataError = false
+                    },
+                    label = "Data de Vencimento (dd/MM/yyyy)",
+                    isError = dataError,
+                    errorMessage = ValidationUtils.getDateError(dataVencimento) ?: ""
+                )
+                
+                Spacer(modifier = Modifier.height(24.dp))
+                
+                ActionButton(
+                    text = if (isLoading) "Salvando..." else "Salvar Compra Parcelada",
                     onClick = {
-                        if (descricao.isNotBlank() && valorTotal.isNotBlank() && parcelas.isNotBlank() && dataVencimento.isNotBlank()) {
+                        // Validação usando utilitários
+                        descricaoError = !ValidationUtils.isValidDescription(descricao)
+                        valorError = !ValidationUtils.isValidAmount(valorTotal)
+                        parcelasError = !ValidationUtils.isValidInstallments(parcelas)
+                        dataError = !ValidationUtils.isValidDate(dataVencimento)
+                        
+                        if (!descricaoError && !valorError && !parcelasError && !dataError) {
+                            isLoading = true
                             viewModel.insert(
                                 descricao,
                                 valorTotal.toDoubleOrNull() ?: 0.0,
@@ -107,11 +125,9 @@ fun CartaoScreen(viewModel: CartaoViewModel, onBack: () -> Unit) {
                             onBack()
                         }
                     },
-                    modifier = Modifier.fillMaxWidth(),
-                    colors = ButtonDefaults.buttonColors(containerColor = RedExpense)
-                ) {
-                    Text("Salvar", color = BlackBackground)
-                }
+                    enabled = !isLoading,
+                    color = RedExpense
+                )
             }
         }
     )

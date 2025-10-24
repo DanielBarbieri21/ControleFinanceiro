@@ -9,7 +9,12 @@ import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp // Adicionado para resolver o erro
+import androidx.compose.ui.unit.sp
+import androidx.hilt.navigation.compose.hiltViewModel
+import com.example.controlefinanceiro.ui.components.BalanceCard
+import com.example.controlefinanceiro.ui.components.FinanceCard
+import com.example.controlefinanceiro.ui.components.TransactionItem
+import com.example.controlefinanceiro.ui.components.TransactionItemData
 import com.example.controlefinanceiro.ui.theme.BlackBackground
 import com.example.controlefinanceiro.ui.theme.GreenIncome
 import com.example.controlefinanceiro.ui.theme.RedExpense
@@ -22,12 +27,12 @@ import kotlinx.coroutines.flow.collectLatest
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreen(
-    receitaViewModel: ReceitaViewModel,
-    contaViewModel: ContaViewModel,
-    cartaoViewModel: CartaoViewModel,
     onNavigateToReceita: () -> Unit,
     onNavigateToConta: () -> Unit,
-    onNavigateToCartao: () -> Unit
+    onNavigateToCartao: () -> Unit,
+    receitaViewModel: ReceitaViewModel = hiltViewModel(),
+    contaViewModel: ContaViewModel = hiltViewModel(),
+    cartaoViewModel: CartaoViewModel = hiltViewModel()
 ) {
     var totalReceitas by remember { mutableDoubleStateOf(0.0) }
     var totalContas by remember { mutableDoubleStateOf(0.0) }
@@ -58,85 +63,103 @@ fun HomeScreen(
             )
         },
         content = { padding ->
-            Column(
+            LazyColumn(
                 modifier = Modifier
                     .fillMaxSize()
                     .background(BlackBackground)
                     .padding(padding)
-                    .padding(16.dp)
             ) {
-                // Saldo
-                Text(
-                    text = "Saldo: R$ ${"%.2f".format(saldo)}",
-                    color = if (saldo >= 0) GreenIncome else RedExpense,
-                    fontSize = 24.sp, // Agora sp está resolvido
-                    fontWeight = FontWeight.Bold
-                )
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Botões
-                Row(
-                    modifier = Modifier.fillMaxWidth(),
-                    horizontalArrangement = Arrangement.SpaceEvenly
-                ) {
-                    Button(
-                        onClick = onNavigateToReceita,
-                        colors = ButtonDefaults.buttonColors(containerColor = GreenIncome)
+                item {
+                    // Saldo Principal
+                    BalanceCard(balance = saldo)
+                }
+                
+                item {
+                    // Cards de Resumo
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceEvenly
                     ) {
-                        Text("Adicionar Receita", color = BlackBackground)
-                    }
-                    Button(
-                        onClick = onNavigateToConta,
-                        colors = ButtonDefaults.buttonColors(containerColor = RedExpense)
-                    ) {
-                        Text("Adicionar Conta", color = BlackBackground)
-                    }
-                    Button(
-                        onClick = onNavigateToCartao,
-                        colors = ButtonDefaults.buttonColors(containerColor = RedExpense)
-                    ) {
-                        Text("Adicionar Cartão", color = BlackBackground)
+                        FinanceCard(
+                            title = "Receitas",
+                            value = totalReceitas,
+                            color = GreenIncome,
+                            modifier = Modifier.weight(1f)
+                        )
+                        FinanceCard(
+                            title = "Despesas",
+                            value = totalContas + totalParcelas,
+                            color = RedExpense,
+                            modifier = Modifier.weight(1f)
+                        )
                     }
                 }
-                Spacer(modifier = Modifier.height(16.dp))
+                
+                item {
+                    Spacer(modifier = Modifier.height(16.dp))
+                }
 
-                // Resumo
-                Text("Receitas: R$ ${"%.2f".format(totalReceitas)}", color = GreenIncome)
-                Text("Contas: R$ ${"%.2f".format(totalContas)}", color = RedExpense)
-                Text("Parcelas: R$ ${"%.2f".format(totalParcelas)}", color = RedExpense)
-                Spacer(modifier = Modifier.height(16.dp))
-
-                // Listas
-                Text("Receitas", color = YellowText, fontWeight = FontWeight.Bold)
+                // Lista de Receitas
                 val receitas by receitaViewModel.receitas.collectAsState(initial = emptyList())
-                LazyColumn {
-                    items(receitas) { receita ->
+                if (receitas.isNotEmpty()) {
+                    item {
                         Text(
-                            "${receita.descricao}: R$ ${"%.2f".format(receita.valor)} (${receita.data})",
+                            text = "Receitas Recentes",
+                            color = YellowText,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                    items(receitas.take(5)) { receita ->
+                        TransactionItem(
+                            description = receita.descricao,
+                            value = receita.valor,
+                            date = receita.data,
                             color = GreenIncome
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Contas", color = YellowText, fontWeight = FontWeight.Bold)
+                // Lista de Contas
                 val contas by contaViewModel.contas.collectAsState(initial = emptyList())
-                LazyColumn {
-                    items(contas) { conta ->
+                if (contas.isNotEmpty()) {
+                    item {
                         Text(
-                            "${conta.descricao}: R$ ${"%.2f".format(conta.valor)} (${conta.dataVencimento})",
+                            text = "Contas Pendentes",
+                            color = YellowText,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                    items(contas.take(5)) { conta ->
+                        TransactionItem(
+                            description = conta.descricao,
+                            value = conta.valor,
+                            date = conta.dataVencimento,
                             color = RedExpense
                         )
                     }
                 }
 
-                Spacer(modifier = Modifier.height(16.dp))
-                Text("Cartões", color = YellowText, fontWeight = FontWeight.Bold)
+                // Lista de Cartões
                 val cartoes by cartaoViewModel.cartoes.collectAsState(initial = emptyList())
-                LazyColumn {
-                    items(cartoes) { cartao ->
+                if (cartoes.isNotEmpty()) {
+                    item {
                         Text(
-                            "${cartao.descricao}: R$ ${"%.2f".format(cartao.valorParcela)} (${cartao.dataVencimento})",
+                            text = "Parcelas do Cartão",
+                            color = YellowText,
+                            fontSize = 18.sp,
+                            fontWeight = FontWeight.Bold,
+                            modifier = Modifier.padding(16.dp)
+                        )
+                    }
+                    items(cartoes.take(5)) { cartao ->
+                        TransactionItem(
+                            description = cartao.descricao,
+                            value = cartao.valorParcela,
+                            date = cartao.dataVencimento,
                             color = RedExpense
                         )
                     }
